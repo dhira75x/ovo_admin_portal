@@ -56,7 +56,7 @@
         <div class="bg-dark-lighter rounded-xl border border-gray-700 shadow-lg p-6">
             <h3 class="text-lg font-medium text-white mb-4">Resolve Dispute</h3>
             
-            <div x-data="{ showResolveModal: false }">
+            <div x-data="{ showResolveModal: {{ $errors->any() ? 'true' : 'false' }}, issueRefund: {{ old('issue_refund') ? 'true' : 'false' }} }">
                 <!-- Trigger Button -->
                 <button @click="showResolveModal = true" class="w-full bg-primary hover:bg-primary-dark text-white font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center">
                     <svg class="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -121,7 +121,38 @@
 
                                     <div>
                                         <label for="resolution_notes" class="block text-sm text-gray-400 mb-1">Resolution Notes</label>
-                                        <textarea name="resolution_notes" id="resolution_notes" rows="4" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-primary placeholder-gray-500" placeholder="Explain the resolution..."></textarea>
+                                        <textarea name="resolution_notes" id="resolution_notes" rows="4" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-primary placeholder-gray-500" placeholder="Explain the resolution...">{{ old('resolution_notes') }}</textarea>
+                                    </div>
+
+                                    <div class="mt-4 border-t border-gray-700 pt-4">
+                                        <label class="flex items-center space-x-3 cursor-pointer">
+                                            <input type="checkbox" name="issue_refund" value="1" x-model="issueRefund" class="form-checkbox h-5 w-5 text-primary bg-gray-800 border-gray-700 rounded focus:ring-primary focus:ring-opacity-50 transition duration-150 ease-in-out">
+                                            <span class="text-white font-medium">Issue Refund to Buyer?</span>
+                                        </label>
+                                        
+                                        <div x-show="issueRefund" x-transition class="mt-4 space-y-4 bg-gray-800/50 p-4 rounded-lg border border-gray-700">
+                                            <div>
+                                                <label class="block text-sm text-gray-400 mb-1">
+                                                    Refund Amount 
+                                                    @if($dispute->dispute_amount)
+                                                        (Max: ${{ number_format($dispute->dispute_amount, 2) }})
+                                                    @endif
+                                                </label>
+                                                <div class="relative">
+                                                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                                        <span class="text-gray-500 sm:text-sm">$</span>
+                                                    </div>
+                                                    <input type="number" step="0.01" name="refund_amount" class="w-full bg-gray-800 border border-gray-700 rounded-lg pl-8 pr-4 py-2 text-white focus:outline-none focus:border-primary" placeholder="0.00" value="{{ old('refund_amount') }}">
+                                                </div>
+                                                @error('refund_amount')
+                                                    <p class="text-red-400 text-sm mt-1">{{ $message }}</p>
+                                                @enderror
+                                            </div>
+                                            <div>
+                                                <label class="block text-sm text-gray-400 mb-1">Transaction ID (Optional)</label>
+                                                <input type="text" name="refund_transaction_id" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-primary" placeholder="Gateway transaction reference" value="{{ old('refund_transaction_id') }}">
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -143,7 +174,35 @@
         <div class="bg-green-900/10 border border-green-500/30 rounded-xl p-6">
             <h3 class="text-lg font-medium text-green-400 mb-2">Resolution Details</h3>
             <p class="text-gray-300 mb-2">{{ $dispute->resolution_notes }}</p>
-            <div class="text-sm text-gray-500">
+            @if($dispute->is_refunded)
+                <div class="mt-4 mb-4 p-4 bg-gray-800 rounded-lg border border-gray-700">
+                    <h4 class="text-sm font-medium text-white mb-2 flex items-center">
+                        <svg class="w-4 h-4 mr-2 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Refund Issued
+                    </h4>
+                    <div class="grid grid-cols-2 gap-4 text-sm mt-3">
+                        <div>
+                            <span class="text-gray-400 block">Amount</span>
+                            <span class="text-white font-medium">${{ number_format($dispute->refund_amount, 2) }}</span>
+                        </div>
+                        @if($dispute->refund_transaction_id)
+                        <div>
+                            <span class="text-gray-400 block">Transaction ID</span>
+                            <span class="text-white">{{ $dispute->refund_transaction_id }}</span>
+                        </div>
+                        @endif
+                        @if($dispute->refunded_at)
+                        <div class="col-span-2">
+                            <span class="text-gray-400 block">Processed On</span>
+                            <span class="text-white">{{ $dispute->refunded_at->format('M d, Y h:i A') }}</span>
+                        </div>
+                        @endif
+                    </div>
+                </div>
+            @endif
+            <div class="text-sm text-gray-500 mt-4">
                 Resolved by Admin #{{ $dispute->resolved_by }} on {{ $dispute->resolved_at->format('M d, Y h:i A') }}
             </div>
         </div>
@@ -175,6 +234,13 @@
                     <span class="text-sm text-gray-400 block">Created</span>
                     <span class="text-white">{{ $dispute->created_at->format('M d, Y h:i A') }}</span>
                 </div>
+                
+                @if($dispute->dispute_amount)
+                <div>
+                    <span class="text-sm text-gray-400 block">Dispute Amount</span>
+                    <span class="text-white font-medium">${{ number_format($dispute->dispute_amount, 2) }}</span>
+                </div>
+                @endif
                 
                 <hr class="border-gray-700 my-4">
 

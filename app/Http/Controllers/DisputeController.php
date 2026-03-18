@@ -43,25 +43,48 @@ class DisputeController extends Controller
      */
     public function resolve(Request $request, $id)
     {
+        $dispute = Dispute::findOrFail($id);
+
         $validator = Validator::make($request->all(), [
             'winner_id' => 'required', // Could be claimant or respondent ID, or distinct value
             'resolution_notes' => 'required|string',
             'status' => 'required|in:resolved,closed',
+            'issue_refund' => 'nullable|boolean',
+            'refund_amount' => [
+                'nullable',
+                'required_if:issue_refund,true',
+                'required_if:issue_refund,1',
+                'numeric',
+                'min:0.01',
+                function ($attribute, $value, $fail) use ($dispute) {
+                    if ($dispute->dispute_amount && $value > $dispute->dispute_amount) {
+                         $fail('The refund amount cannot exceed the dispute amount ($' . number_format($dispute->dispute_amount, 2) . ').');
+                    }
+                },
+            ],
+            'refund_transaction_id' => 'nullable|string',
         ]);
 
         if ($validator->fails()) {
-            return back()->withErrors($validator)->with('error', 'Validation failed: ' . $validator->errors()->first());
+            return back()->withErrors($validator)->with('error', 'Validation failed: ' . $validator->errors()->first())->withInput();
         }
 
         try {
-            $dispute = Dispute::findOrFail($id);
-            
-            $dispute->update([
+            $updateData = [
                 'status' => $request->status,
                 'resolution_notes' => $request->resolution_notes,
                 'resolved_by' => Auth::id(), // Assuming admin guard
                 'resolved_at' => now(),
-            ]);
+            ];
+
+            if ($request->boolean('issue_refund')) {
+                $updateData['is_refunded'] = true;
+                $updateData['refund_amount'] = $request->refund_amount;
+                $updateData['refund_transaction_id'] = $request->refund_transaction_id;
+                $updateData['refunded_at'] = now();
+            }
+
+            $dispute->update($updateData);
             
             // Logic to award/refund would go here (omitted for now)
 

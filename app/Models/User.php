@@ -70,4 +70,14 @@ class User extends Authenticatable
     {
         return $this->hasMany(KycSubmission::class);
     }
+
+    public function reviewsReceived()
+    {
+        return $this->hasMany(Review::class, 'merchant_id');
+    }
+
+    public function reviewsGiven()
+    {
+        return $this->hasMany(Review::class, 'customer_id');
+    }
 }
