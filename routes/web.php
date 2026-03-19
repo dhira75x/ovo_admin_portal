@@ -26,6 +26,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
     // Authenticated Admin Routes
     Route::middleware('auth:admin')->group(function () {
         Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+        Route::get('/notifications/count', [DashboardController::class, 'notificationsCount'])->name('notifications.count');
         
         // Support Tickets
         Route::get('/tickets', [SupportTicketController::class, 'index'])->name('tickets.index');
@@ -52,6 +53,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
         // Merchants
         Route::get('/merchants', [MerchantController::class, 'index'])->name('merchants.index');
         Route::get('/merchants/{id}', [MerchantController::class, 'show'])->name('merchants.show');
+        Route::post('/merchants/{id}/approve', [MerchantController::class, 'approve'])->name('merchants.approve');
+        Route::post('/merchants/{id}/reject', [MerchantController::class, 'reject'])->name('merchants.reject');
         
         Route::post('/logout', [AdminAuthController::class, 'logout'])->name('logout');
     });

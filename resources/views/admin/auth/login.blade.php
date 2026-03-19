@@ -15,11 +15,17 @@
         <form class="mt-8 space-y-6" action="{{ route('admin.login.submit') }}" method="POST">
             @csrf
             
+            @if ($errors->any())
+                <div class="bg-red-500/10 border border-red-500/50 text-red-500 px-4 py-3 rounded-xl text-sm">
+                    {{ $errors->first() }}
+                </div>
+            @endif
+
             <div class="rounded-md space-y-5">
                 <div>
                     <label for="email" class="sr-only">Email address</label>
-                    <input id="email" name="email" type="email" autocomplete="email" required 
-                        class="appearance-none rounded-xl relative block w-full px-4 py-4 border border-transparent placeholder-gray-500 text-gray-300 bg-[#2C2C3E] focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent focus:z-10 sm:text-sm transition-all duration-200" 
+                    <input id="email" name="email" type="email" value="{{ old('email') }}" autocomplete="email" required 
+                        class="appearance-none rounded-xl relative block w-full px-4 py-4 border border-transparent placeholder-gray-500 text-gray-300 bg-[#2C2C3E] focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent focus:z-10 sm:text-sm transition-all duration-200 @error('email') border-red-500/50 @enderror" 
                         placeholder="Email address">
                 </div>
                 <div>
@@ -39,15 +45,15 @@
                 </div>
 
                 <div class="text-sm">
-                    <a href="#" class="font-medium text-primary hover:text-primary/80">
+                    <a href="#" class="font-medium text-primary hover:text-primary/80 transition-colors">
                         Forgot password?
                     </a>
                 </div>
             </div>
 
             <div>
-                <button type="submit" class="group relative w-1/2 mx-auto flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-xl text-white bg-primary hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary focus:ring-offset-gray-900 transition-all duration-200 shadow-lg shadow-primary/30">
-                    Sign in
+                <button type="submit" class="group relative w-full flex justify-center py-4 px-4 border border-transparent text-sm font-bold rounded-xl text-white bg-primary hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary focus:ring-offset-gray-900 transition-all duration-200 shadow-lg shadow-primary/30 uppercase tracking-widest">
+                    Log in
                 </button>
             </div>
         </form>

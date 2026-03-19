@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@section('header', $merchant->name)
+@section('header', $merchant['businessName'] ?? 'Merchant Details')
 
 @section('header-actions')
     <a href="{{ route('admin.merchants.index') }}" class="text-gray-400 hover:text-white text-sm">
@@ -10,58 +10,83 @@
 
 @section('content')
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-    <!-- Main Content: Reviews -->
+    <!-- Main Content: Reviews and Info -->
     <div class="lg:col-span-2 space-y-6">
+        <!-- Merchant Stats -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="bg-dark-lighter rounded-xl border border-gray-700 p-4">
+                <span class="text-gray-400 text-xs uppercase font-semibold">Total Revenue</span>
+                <div class="text-2xl font-bold text-white mt-1">NGN {{ number_format($analytics['revenue']['total'] ?? 0, 2) }}</div>
+                <div class="text-xs {{ ($analytics['revenue']['growth'] ?? 0) >= 0 ? 'text-green-400' : 'text-red-400' }} mt-1">
+                    {{ ($analytics['revenue']['growth'] ?? 0) >= 0 ? '+' : '' }}{{ $analytics['revenue']['growth'] ?? 0 }}% from last period
+                </div>
+            </div>
+            <div class="bg-dark-lighter rounded-xl border border-gray-700 p-4">
+                <span class="text-gray-400 text-xs uppercase font-semibold">Total Orders</span>
+                <div class="text-2xl font-bold text-white mt-1">{{ number_format($analytics['orders']['total'] ?? 0) }}</div>
+                <div class="text-xs text-blue-400 mt-1">
+                    {{ $analytics['orders']['completionRate'] ?? 0 }}% completion rate
+                </div>
+            </div>
+            <div class="bg-dark-lighter rounded-xl border border-gray-700 p-4">
+                <span class="text-gray-400 text-xs uppercase font-semibold">Customers</span>
+                <div class="text-2xl font-bold text-white mt-1">{{ number_format($analytics['customers']['total'] ?? 0) }}</div>
+                <div class="text-xs {{ ($analytics['customers']['growth'] ?? 0) >= 0 ? 'text-green-400' : 'text-red-400' }} mt-1">
+                    {{ ($analytics['customers']['growth'] ?? 0) >= 0 ? '+' : '' }}{{ $analytics['customers']['growth'] ?? 0 }}% growth
+                </div>
+            </div>
+        </div>
+
         <!-- Reviews Section -->
         <div class="bg-dark-lighter rounded-xl border border-gray-700 shadow-lg p-6">
             <div class="flex items-center justify-between mb-4">
                 <h3 class="text-lg font-medium text-white">Customer Reviews</h3>
                 <span class="text-sm text-gray-400">{{ $reviews->total() }} total</span>
-            </div>
-            
             @if($reviews->count() > 0)
                 <div class="space-y-4">
                     @foreach($reviews as $review)
+                        @php
+                            $reviewer = data_get($review, 'createdBy');
+                            $reviewerName = data_get($reviewer, 'firstname') 
+                                ? (data_get($reviewer, 'firstname') . ' ' . data_get($reviewer, 'lastname'))
+                                : (data_get($review, 'user.name') ?? data_get($review, 'customer.name') ?? 'Unknown User');
+                            $reviewerInitial = substr($reviewerName, 0, 1);
+                        @endphp
                         <div class="border border-gray-700 rounded-lg p-4 bg-gray-800/50">
                             <div class="flex items-start justify-between">
                                 <div class="flex items-center">
                                     <div class="h-8 w-8 rounded-full bg-gray-700 flex items-center justify-center text-xs font-bold text-white mr-3">
-                                        {{ substr($review->customer->name ?? 'U', 0, 1) }}
+                                        {{ $reviewerInitial }}
                                     </div>
                                     <div>
-                                        <div class="text-white font-medium">{{ $review->customer->name ?? 'Unknown' }}</div>
-                                        <div class="text-xs text-gray-500">{{ $review->created_at->format('M d, Y') }}</div>
+                                        <div class="text-white font-medium">{{ $reviewerName }}</div>
+                                        <div class="text-xs text-gray-500">{{ \Carbon\Carbon::parse($review['createdAt'] ?? $review['created_at'] ?? now())->format('M d, Y') }}</div>
                                     </div>
                                 </div>
                                 <div class="flex items-center bg-gray-700/50 px-2 py-1 rounded">
                                     <span class="text-yellow-400 mr-1">★</span>
-                                    <span class="text-white font-medium">{{ $review->rating }}</span>
+                                    <span class="text-white font-medium">{{ $review['count'] ?? $review['rating'] ?? 0 }}</span>
                                     <span class="text-gray-500 text-xs ml-1">/ 5</span>
                                 </div>
                             </div>
-                            @if($review->comment)
-                                <p class="text-gray-300 mt-3 text-sm">{{ $review->comment }}</p>
+                            @if($review['text'] ?? $review['comment'] ?? null)
+                                <p class="text-gray-300 mt-3 text-sm">{{ $review['text'] ?? $review['comment'] }}</p>
                             @endif
-                            @if($review->order_id)
+                            @if($review['order_id'] ?? $review['orderId'] ?? null)
                                 <div class="mt-2 text-xs text-gray-500">
-                                    Order #{{ $review->order_id }}
+                                    Order: #{{ $review['order_id'] ?? $review['orderId'] }}
                                 </div>
                             @endif
                         </div>
                     @endforeach
+                    
+                    <div class="mt-6">
+                        {{ $reviews->links() }}
+                    </div>
                 </div>
-                
-                @if($reviews->hasPages())
-                <div class="mt-4 pt-4 border-t border-gray-700">
-                    {{ $reviews->links() }}
-                </div>
-                @endif
             @else
-                <div class="text-center py-8 text-gray-500">
-                    <svg class="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-                    </svg>
-                    <p>No reviews yet.</p>
+                <div class="text-center py-8">
+                    <p class="text-gray-500 italic">No reviews yet for this merchant.</p>
                 </div>
             @endif
         </div>
@@ -70,71 +95,140 @@
     <!-- Sidebar: Merchant Info -->
     <div class="space-y-6">
         <div class="bg-dark-lighter rounded-xl border border-gray-700 shadow-lg p-6">
-            <h3 class="text-lg font-medium text-white mb-4">Merchant Details</h3>
+            <h3 class="text-lg font-medium text-white mb-4">Business Information</h3>
             
-            <div class="flex items-center mb-6">
-                <div class="h-16 w-16 rounded-full bg-gray-700 flex items-center justify-center text-xl font-bold text-white mr-4">
-                    {{ substr($merchant->name, 0, 1) }}
-                </div>
-                <div>
-                    <div class="text-white font-medium text-lg">{{ $merchant->name }}</div>
-                    <div class="text-sm text-gray-400">{{ $merchant->email }}</div>
-                </div>
-            </div>
-
             <div class="space-y-4">
-                <div class="bg-gray-800/50 rounded-lg p-4">
-                    <div class="text-sm text-gray-400 mb-1">Average Rating</div>
-                    @if($merchant->reviews_received_avg_rating)
-                        <div class="flex items-center">
-                            <span class="text-yellow-400 text-2xl mr-2">★</span>
-                            <span class="text-white text-2xl font-bold">{{ number_format($merchant->reviews_received_avg_rating, 1) }}</span>
-                            <span class="text-gray-500 text-sm ml-1">/ 5</span>
+                <div>
+                    <span class="text-sm text-gray-400 block">Business Name</span>
+                    <span class="text-white font-medium">{{ $merchant['businessName'] ?? 'N/A' }}</span>
+                </div>
+                
+                <div>
+                    <span class="text-sm text-gray-400 block">Status</span>
+                    <div class="flex flex-wrap gap-2 mt-1">
+                        @if($merchant['isVerified'] ?? false)
+                            <span class="px-2 py-1 rounded-full text-xs font-semibold bg-green-500/10 text-green-400">
+                                account Verified
+                            </span>
+                        @else
+                            <span class="px-2 py-1 rounded-full text-xs font-semibold bg-yellow-500/10 text-yellow-400">
+                                Account Pending
+                            </span>
+                        @endif
+
+                        @php
+                            $cacStatus = $merchant['cacStatus'] ?? 'pending';
+                            $cacStatusClasses = [
+                                'pending' => 'bg-yellow-500/10 text-yellow-400',
+                                'approved' => 'bg-green-500/10 text-green-400',
+                                'rejected' => 'bg-red-500/10 text-red-400',
+                            ][$cacStatus] ?? 'bg-gray-500/10 text-gray-400';
+                        @endphp
+                        <span class="px-2 py-1 rounded-full text-xs font-semibold {{ $cacStatusClasses }}">
+                            CAC: {{ ucfirst($cacStatus) }}
+                        </span>
+                    </div>
+                </div>
+
+                <div>
+                    <span class="text-sm text-gray-400 block">CAC Number</span>
+                    <span class="text-white font-medium">{{ $merchant['cacNumber'] ?? 'N/A' }}</span>
+                </div>
+
+                @if($merchant['cacDocument'] ?? null)
+                <div>
+                    <span class="text-sm text-gray-400 block mb-2">Registration Document</span>
+                    <div class="border border-gray-700 rounded-lg overflow-hidden bg-gray-900/50 mb-3">
+                        @php
+                            $isPdf = str_ends_with(strtolower($merchant['cacDocument']), '.pdf');
+                        @endphp
+                        
+                        @if($isPdf)
+                            <iframe src="{{ $merchant['cacDocument'] }}" class="w-full h-48 border-none"></iframe>
+                        @else
+                            <img src="{{ $merchant['cacDocument'] }}" alt="CAC Document" class="w-full h-auto max-h-64 object-contain">
+                        @endif
+                    </div>
+                    
+                    <div class="flex flex-col space-y-3">
+                        <a href="{{ $merchant['cacDocument'] }}" target="_blank" class="text-primary hover:text-primary-light text-xs flex items-center">
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                            </svg>
+                            Open in Full Screen
+                        </a>
+
+                        @if(($merchant['cacStatus'] ?? 'pending') === 'pending')
+                        <div class="pt-2 border-t border-gray-700 space-y-3">
+                            <form action="{{ route('admin.merchants.approve', $merchant['_id']) }}" method="POST" onsubmit="return confirm('Approve this business registration?')">
+                                @csrf
+                                <button type="submit" class="w-full bg-green-600 hover:bg-green-500 text-white text-xs font-bold py-2 px-4 rounded transition-colors">
+                                    Approve CAC Document
+                                </button>
+                            </form>
+
+                            <div x-data="{ showReject: false }">
+                                <button @click="showReject = !showReject" class="w-full bg-red-600/20 hover:bg-red-600/30 text-red-500 text-xs font-bold py-2 px-4 rounded border border-red-500/30 transition-colors">
+                                    Reject Submission
+                                </button>
+                                
+                                <div x-show="showReject" x-cloak class="mt-3 p-3 bg-gray-800 rounded border border-gray-700">
+                                    <form action="{{ route('admin.merchants.reject', $merchant['_id']) }}" method="POST">
+                                        @csrf
+                                        <label class="block text-xs text-gray-400 mb-2">Rejection Reason</label>
+                                        <textarea name="reason" rows="3" class="w-full bg-gray-900 border border-gray-700 rounded p-2 text-white text-xs focus:border-primary focus:outline-none" placeholder="Explain why the document was rejected..." required></textarea>
+                                        <button type="submit" class="w-full mt-2 bg-red-600 hover:bg-red-500 text-white text-xs font-bold py-2 rounded transition-colors">
+                                            Confirm Rejection
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
                         </div>
-                    @else
-                        <span class="text-gray-500">No ratings yet</span>
+                        @endif
+                    </div>
+
+                    @if($merchant['cacRejectionReason'] ?? null)
+                        <div class="mt-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+                            <span class="text-xs font-bold text-red-400 uppercase block mb-1">Rejection Reason</span>
+                            <p class="text-xs text-gray-300">{{ $merchant['cacRejectionReason'] }}</p>
+                        </div>
+                    @endif
+
+                    @if($merchant['cacReviewedAt'] ?? null)
+                        <div class="mt-4 text-[10px] text-gray-500 italic">
+                            Reviewed by {{ $merchant['cacReviewedBy']['firstname'] ?? 'Admin' }} on {{ \Carbon\Carbon::parse($merchant['cacReviewedAt'])->format('M d, Y H:i') }}
+                        </div>
                     @endif
                 </div>
+                @endif
                 
-                <div class="bg-gray-800/50 rounded-lg p-4">
-                    <div class="text-sm text-gray-400 mb-1">Total Reviews</div>
-                    <div class="text-white text-2xl font-bold">{{ $merchant->reviews_received_count }}</div>
-                </div>
-                
-                <div class="bg-gray-800/50 rounded-lg p-4">
-                    <div class="text-sm text-gray-400 mb-1">Member Since</div>
-                    <div class="text-white">{{ $merchant->created_at->format('M d, Y') }}</div>
-                </div>
-            </div>
-        </div>
+                <hr class="border-gray-700 my-4">
 
-        <!-- Rating Breakdown -->
-        @if($merchant->reviews_received_count > 0)
-        <div class="bg-dark-lighter rounded-xl border border-gray-700 shadow-lg p-6">
-            <h3 class="text-lg font-medium text-white mb-4">Rating Breakdown</h3>
-            
-            @php
-                $ratings = $merchant->reviewsReceived->groupBy('rating')->map->count();
-                $total = $merchant->reviews_received_count;
-            @endphp
-            
-            <div class="space-y-2">
-                @foreach([5, 4, 3, 2, 1] as $star)
-                    @php
-                        $count = $ratings[$star] ?? 0;
-                        $percentage = $total > 0 ? ($count / $total) * 100 : 0;
-                    @endphp
-                    <div class="flex items-center">
-                        <span class="text-sm text-gray-400 w-8">{{ $star }} ★</span>
-                        <div class="flex-1 mx-3 bg-gray-700 rounded-full h-2">
-                            <div class="bg-primary h-2 rounded-full" style="width: {{ $percentage }}%"></div>
+                <div>
+                    <span class="text-sm text-gray-400 block">Owner / User</span>
+                    <div class="flex items-center mt-2">
+                        @php
+                            $user = data_get($merchant, 'userId');
+                            $userName = data_get($user, 'firstname')
+                                ? (data_get($user, 'firstname') . ' ' . data_get($user, 'lastname'))
+                                : (data_get($merchant, 'user.name') ?? 'Unknown');
+                        @endphp
+                        <div class="h-8 w-8 rounded-full bg-gray-700 flex items-center justify-center text-xs font-bold text-white mr-3">
+                            {{ substr($userName, 0, 1) }}
                         </div>
-                        <span class="text-sm text-gray-400 w-8 text-right">{{ $count }}</span>
+                        <div>
+                            <span class="text-white text-sm block">{{ $userName }}</span>
+                            <span class="text-xs text-gray-500">{{ data_get($user, 'email') ?? data_get($merchant, 'user.email') ?? '' }}</span>
+                        </div>
                     </div>
-                @endforeach
+                </div>
+
+                <div>
+                    <span class="text-sm text-gray-400 block">Joined On</span>
+                    <span class="text-white text-sm">{{ \Carbon\Carbon::parse($merchant['createdAt'] ?? now())->format('M d, Y') }}</span>
+                </div>
             </div>
         </div>
-        @endif
     </div>
 </div>
 @endsection

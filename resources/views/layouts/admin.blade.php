@@ -116,8 +116,30 @@
             <!-- Top Header -->
             <header class="h-20 flex items-center justify-end px-6">
                 <div class="flex items-center space-x-4">
-                    <button class="relative p-1 text-gray-400 hover:text-white focus:outline-none">
-                        <span class="absolute top-0 right-0 block h-2 w-2 rounded-full bg-red-500 ring-2 ring-gray-900"></span>
+                    <button 
+                        x-data="{ 
+                            count: 0,
+                            async fetchCount() {
+                                try {
+                                    const response = await fetch('{{ route('admin.notifications.count') }}?t=' + new Date().getTime());
+                                    const data = await response.json();
+                                    this.count = data.count;
+                                } catch (e) {
+                                    console.error('Failed to fetch notifications', e);
+                                }
+                            }
+                        }"
+                        x-init="fetchCount(); setInterval(() => fetchCount(), 15000)"
+                        @visibilitychange.window="if (!document.hidden) fetchCount()"
+                        @notification-refresh.window="fetchCount()"
+                        class="relative p-1 text-gray-400 hover:text-white focus:outline-none"
+                    >
+                        <template x-if="count > 0">
+                            <span 
+                                x-text="count"
+                                class="absolute -top-1 -right-1 flex items-center justify-center h-4 w-4 rounded-full bg-red-500 text-[10px] font-bold text-white ring-2 ring-gray-900"
+                            ></span>
+                        </template>
                         <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                         </svg>
