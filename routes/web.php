@@ -9,6 +9,7 @@ use App\Http\Controllers\KycController;
 
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\MerchantController;
+use App\Http\Controllers\WithdrawalController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -21,6 +22,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::middleware('guest:admin')->group(function () {
         Route::get('/login', [AdminAuthController::class, 'showLoginForm'])->name('login');
         Route::post('/login', [AdminAuthController::class, 'login'])->name('login.submit');
+        Route::post('/forgot-password', [AdminAuthController::class, 'forgotPassword'])->name('forgot-password');
+        Route::post('/reset-password', [AdminAuthController::class, 'resetPassword'])->name('reset-password');
     });
 
     // Authenticated Admin Routes
@@ -55,6 +58,11 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/merchants/{id}', [MerchantController::class, 'show'])->name('merchants.show');
         Route::post('/merchants/{id}/approve', [MerchantController::class, 'approve'])->name('merchants.approve');
         Route::post('/merchants/{id}/reject', [MerchantController::class, 'reject'])->name('merchants.reject');
+        
+        // Withdrawals
+        Route::get('/withdrawals', [WithdrawalController::class, 'index'])->name('withdrawals.index');
+        Route::post('/withdrawals/{id}/approve', [WithdrawalController::class, 'approve'])->name('withdrawals.approve');
+        Route::post('/withdrawals/{id}/reject', [WithdrawalController::class, 'reject'])->name('withdrawals.reject');
         
         Route::post('/logout', [AdminAuthController::class, 'logout'])->name('logout');
     });

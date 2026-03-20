@@ -74,4 +74,23 @@ class AdminAuthController extends Controller
 
         return redirect()->route('admin.login');
     }
+
+    public function forgotPassword(Request $request)
+    {
+        $request->validate(['email' => 'required|email']);
+        $response = $this->service->requestPasswordReset($request->email);
+        return response()->json($response);
+    }
+
+    public function resetPassword(Request $request)
+    {
+        $request->validate([
+            'email' => 'required|email',
+            'otp' => 'required|string',
+            'newPassword' => 'required|string|min:8',
+        ]);
+
+        $response = $this->service->resetPassword($request->email, $request->otp, $request->newPassword);
+        return response()->json($response);
+    }
 }

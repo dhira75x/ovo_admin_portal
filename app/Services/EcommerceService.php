@@ -171,6 +171,26 @@ class EcommerceService
         }
     }
 
+    public function getWithdrawals($params = [])
+    {
+        $response = $this->request()->get("{$this->baseUrl}/withdrawals", $params);
+        return $response->json();
+    }
+
+    public function approveWithdrawal($id)
+    {
+        $response = $this->request()->patch("{$this->baseUrl}/withdrawals/approve/{$id}");
+        return $response->json();
+    }
+
+    public function rejectWithdrawal($id, $comment)
+    {
+        $response = $this->request()->patch("{$this->baseUrl}/withdrawals/reject/{$id}", [
+            'comment' => $comment
+        ]);
+        return $response->json();
+    }
+
     public function markAllTicketMessagesAsViewed($ticketId, $userId)
     {
         try {
@@ -188,5 +208,23 @@ class EcommerceService
             Log::error("Exception marking messages as viewed for ticket {$ticketId}: " . $e->getMessage());
             return null;
         }
+    }
+
+    public function requestPasswordReset($email)
+    {
+        $response = Http::post("{$this->baseUrl}/auth/forgot-password", [
+            'email' => $email,
+        ]);
+        return $response->json();
+    }
+
+    public function resetPassword($email, $otp, $newPassword)
+    {
+        $response = Http::post("{$this->baseUrl}/auth/reset-password", [
+            'email' => $email,
+            'otp' => $otp,
+            'newPassword' => $newPassword,
+        ]);
+        return $response->json();
     }
 }

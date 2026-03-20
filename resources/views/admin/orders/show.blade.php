@@ -48,15 +48,32 @@
                             @endforeach
                         </tbody>
                         <tfoot class="bg-gray-800/30">
-                            @if(isset($order['tax']) && $order['tax'] > 0)
+                            @php
+                                $subtotal = $order['subtotal'] ?? $order['total'] ?? 0;
+                                $taxAmount = isset($order['subtotal']) ? ($order['tax'] ?? 0) : (($order['total'] ?? 0) * ($order['tax'] ?? 0));
+                                $shippingFee = $order['shippingFee'] ?? 0;
+                                $finalTotal = $order['totalAmount'] ?? ($subtotal + $taxAmount + $shippingFee);
+                                $currency = $order['currency'] ?? 'NGN';
+                            @endphp
+                            <tr>
+                                <td colspan="3" class="px-4 py-3 text-right text-gray-400">Subtotal:</td>
+                                <td class="px-4 py-3 text-right text-white">{{ $currency }} {{ number_format($subtotal, 2) }}</td>
+                            </tr>
+                            @if($taxAmount > 0)
                             <tr>
                                 <td colspan="3" class="px-4 py-3 text-right text-gray-400">Tax:</td>
-                                <td class="px-4 py-3 text-right text-white">{{ $order['currency'] ?? 'NGN' }} {{ number_format(($order['total'] ?? 0) * $order['tax'], 2) }}</td>
+                                <td class="px-4 py-3 text-right text-white">{{ $currency }} {{ number_format($taxAmount, 2) }}</td>
+                            </tr>
+                            @endif
+                            @if($shippingFee > 0)
+                            <tr>
+                                <td colspan="3" class="px-4 py-3 text-right text-gray-400">Shipping Fee:</td>
+                                <td class="px-4 py-3 text-right text-white">{{ $currency }} {{ number_format($shippingFee, 2) }}</td>
                             </tr>
                             @endif
                             <tr>
                                 <td colspan="3" class="px-4 py-3 text-right text-gray-300 font-medium">Total:</td>
-                                <td class="px-4 py-3 text-right text-white font-bold">{{ $order['currency'] ?? 'NGN' }} {{ number_format($order['total'] ?? 0, 2) }}</td>
+                                <td class="px-4 py-3 text-right text-white font-bold">{{ $currency }} {{ number_format($finalTotal, 2) }}</td>
                             </tr>
                         </tfoot>
                     </table>
@@ -166,7 +183,13 @@
                 
                 <div>
                     <span class="text-sm text-gray-400 block">Total Amount</span>
-                    <span class="text-white font-bold text-lg">{{ $order['currency'] ?? 'NGN' }} {{ number_format($order['total'] ?? 0, 2) }}</span>
+                    @php
+                        $subtotal = $order['subtotal'] ?? $order['total'] ?? 0;
+                        $taxAmount = isset($order['subtotal']) ? ($order['tax'] ?? 0) : (($order['total'] ?? 0) * ($order['tax'] ?? 0));
+                        $shippingFee = $order['shippingFee'] ?? 0;
+                        $finalTotal = $order['totalAmount'] ?? ($subtotal + $taxAmount + $shippingFee);
+                    @endphp
+                    <span class="text-white font-bold text-lg">{{ $order['currency'] ?? 'NGN' }} {{ number_format($finalTotal, 2) }}</span>
                 </div>
                 
                 <hr class="border-gray-700 my-4">
