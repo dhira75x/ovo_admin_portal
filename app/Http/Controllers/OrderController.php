@@ -2,31 +2,40 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Order;
+use App\Services\EcommerceService;
 use Illuminate\Http\Request;
 
 class OrderController extends Controller
 {
+    protected $service;
+
+    public function __construct(EcommerceService $service)
+    {
+        $this->service = $service;
+    }
+
     /**
      * Display a listing of the resource.
      */
     public function index(Request $request)
     {
-        $query = Order::with('user');
+        $params = [
+            'page' => $request->get('page', 1),
+            'limit' => 10,
+            'status' => $request->get('status'),
+            'search' => $request->get('search'),
+        ];
 
-        if ($request->has('status') && $request->status != 'all') {
-            $query->where('status', $request->status);
-        }
-
-        if ($request->has('search') && $request->search != '') {
-            $search = $request->search;
-            $query->whereHas('user', function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%");
-            });
-        }
-
-        $orders = $query->latest()->paginate(10);
+        $response = $this->service->getOrders(array_filter($params));
+        $payload = $response['payload'] ?? [];
+        
+        $orders = new \Illuminate\Pagination\LengthAwarePaginator(
+            $payload['docs'] ?? [],
+            $payload['totalDocs'] ?? 0,
+            $payload['limit'] ?? 10,
+            $payload['page'] ?? 1,
+            ['path' => $request->url(), 'query' => $request->query()]
+        );
 
         return view('admin.orders.index', compact('orders'));
     }
@@ -36,7 +45,13 @@ class OrderController extends Controller
      */
     public function show($id)
     {
-        $order = Order::with(['user', 'items'])->findOrFail($id);
+        $response = $this->service->getOrder($id);
+        $order = $response['payload'] ?? null;
+
+        if (!$order) {
+            abort(404);
+        }
+
         return view('admin.orders.show', compact('order'));
     }
 }

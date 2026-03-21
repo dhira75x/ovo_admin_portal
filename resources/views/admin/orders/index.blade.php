@@ -52,19 +52,19 @@
                 <tbody class="divide-y divide-gray-700">
                     @forelse($orders as $order)
                     <tr class="hover:bg-gray-800/30 transition-colors">
-                        <td class="px-6 py-4 text-white font-medium">#{{ $order->id }}</td>
+                        <td class="px-6 py-4 text-white font-medium">#{{ $order['_id'] ?? $order['id'] }}</td>
                         <td class="px-6 py-4">
                             <div class="flex items-center">
                                 <div class="h-8 w-8 rounded-full bg-gray-700 flex items-center justify-center text-xs font-bold text-white mr-3">
-                                    {{ substr($order->user->name ?? 'U', 0, 1) }}
+                                    {{ substr(data_get($order, 'user.name') ?? 'U', 0, 1) }}
                                 </div>
                                 <div>
-                                    <div class="text-white">{{ $order->user->name ?? 'Unknown' }}</div>
-                                    <div class="text-xs">{{ $order->user->email ?? '' }}</div>
+                                    <div class="text-white">{{ data_get($order, 'user.name') ?? 'Unknown' }}</div>
+                                    <div class="text-xs">{{ data_get($order, 'user.email') ?? '' }}</div>
                                 </div>
                             </div>
                         </td>
-                        <td class="px-6 py-4 text-white font-medium">${{ number_format($order->total_amount, 2) }}</td>
+                        <td class="px-6 py-4 text-white font-medium">${{ number_format($order['totalAmount'] ?? $order['total_amount'] ?? 0, 2) }}</td>
                         <td class="px-6 py-4">
                             @php
                                 $statusColors = [
@@ -73,17 +73,18 @@
                                     'completed' => 'bg-green-500/10 text-green-400',
                                     'cancelled' => 'bg-red-500/10 text-red-400',
                                 ];
-                                $statusLabel = ucfirst($order->status);
-                                $statusClass = $statusColors[$order->status] ?? 'bg-gray-700 text-gray-300';
+                                $status = $order['status'] ?? 'pending';
+                                $statusLabel = ucfirst($status);
+                                $statusClass = $statusColors[$status] ?? 'bg-gray-700 text-gray-300';
                             @endphp
                             <span class="px-2 py-1 rounded-full text-xs font-semibold {{ $statusClass }}">
                                 {{ $statusLabel }}
                             </span>
                         </td>
-                        <td class="px-6 py-4">{{ $order->payment_method ?? 'N/A' }}</td>
-                        <td class="px-6 py-4">{{ $order->created_at->format('M d, Y') }}</td>
+                        <td class="px-6 py-4">{{ $order['paymentMethod'] ?? $order['payment_method'] ?? 'N/A' }}</td>
+                        <td class="px-6 py-4">{{ \Carbon\Carbon::parse($order['createdAt'] ?? now())->format('M d, Y') }}</td>
                         <td class="px-6 py-4 text-right">
-                            <a href="{{ route('admin.orders.show', $order->id) }}" class="text-primary hover:text-primary-light font-medium transition-colors">View</a>
+                            <a href="{{ route('admin.orders.show', $order['_id'] ?? $order['id']) }}" class="text-primary hover:text-primary-light font-medium transition-colors">View</a>
                         </td>
                     </tr>
                     @empty

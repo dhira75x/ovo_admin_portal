@@ -32,8 +32,8 @@
                     <tr>
                         <th class="px-6 py-4">Merchant</th>
                         <th class="px-6 py-4">Email</th>
+                        <th class="px-6 py-4">Verification</th>
                         <th class="px-6 py-4">Rating</th>
-                        <th class="px-6 py-4">Reviews</th>
                         <th class="px-6 py-4 text-right">Actions</th>
                     </tr>
                 </thead>
@@ -43,30 +43,53 @@
                         <td class="px-6 py-4">
                             <div class="flex items-center">
                                 <div class="h-10 w-10 rounded-full bg-gray-700 flex items-center justify-center text-sm font-bold text-white mr-3">
-                                    {{ substr($merchant->name, 0, 1) }}
+                                    {{ substr($merchant['businessName'] ?? $merchant['name'] ?? 'M', 0, 1) }}
                                 </div>
-                                <div class="text-white font-medium">{{ $merchant->name }}</div>
+                                <div class="text-white font-medium">{{ $merchant['businessName'] ?? $merchant['name'] ?? 'Unknown' }}</div>
                             </div>
                         </td>
-                        <td class="px-6 py-4">{{ $merchant->email }}</td>
+                        <td class="px-6 py-4">{{ data_get($merchant, 'user.email') ?? $merchant['email'] ?? '' }}</td>
                         <td class="px-6 py-4">
-                            @if($merchant->reviews_received_avg_rating)
+                            <div class="space-y-1">
+                                @if($merchant['isVerified'] ?? false)
+                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-500/10 text-green-400 block w-fit">
+                                        Verified
+                                    </span>
+                                @else
+                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-yellow-500/10 text-yellow-400 block w-fit">
+                                        Pending
+                                    </span>
+                                @endif
+
+                                @php
+                                    $cacStatus = $merchant['cacStatus'] ?? 'pending';
+                                    $cacStatusClasses = [
+                                        'pending' => 'bg-yellow-500/10 text-yellow-400',
+                                        'approved' => 'bg-green-500/10 text-green-400',
+                                        'rejected' => 'bg-red-500/10 text-red-400',
+                                    ][$cacStatus] ?? 'bg-gray-500/10 text-gray-400';
+                                @endphp
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold {{ $cacStatusClasses }} block w-fit">
+                                    CAC: {{ strtoupper($cacStatus) }}
+                                </span>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4">
+                            @php
+                                $avgRating = data_get($merchant, 'reviews_received_avg_rating') ?? 0;
+                            @endphp
+                            @if($avgRating > 0)
                                 <div class="flex items-center">
                                     <span class="text-yellow-400 mr-1">★</span>
-                                    <span class="text-white font-medium">{{ number_format($merchant->reviews_received_avg_rating, 1) }}</span>
+                                    <span class="text-white font-medium">{{ number_format($avgRating, 1) }}</span>
                                     <span class="text-gray-500 text-xs ml-1">/ 5</span>
                                 </div>
                             @else
                                 <span class="text-gray-500">No ratings</span>
                             @endif
                         </td>
-                        <td class="px-6 py-4">
-                            <span class="px-2 py-1 rounded-full text-xs font-semibold bg-gray-700 text-gray-300">
-                                {{ $merchant->reviews_received_count }}
-                            </span>
-                        </td>
                         <td class="px-6 py-4 text-right">
-                            <a href="{{ route('admin.merchants.show', $merchant->id) }}" class="text-primary hover:text-primary-light font-medium transition-colors">View Details</a>
+                            <a href="{{ route('admin.merchants.show', $merchant['_id'] ?? $merchant['id']) }}" class="text-primary hover:text-primary-light font-medium transition-colors">View Details</a>
                         </td>
                     </tr>
                     @empty

@@ -1,0 +1,16 @@
+node_modules
+/vendor
+.env
+.env.backup
+.env.production
+composer.phar
+/storage/*.key
+/storage/framework/cache/data/*
+/storage/framework/sessions/*
+/storage/framework/views/*
+/storage/logs/*
+/public/storage
+/public/build
+/public/hot
+.phpunit.result.cache
+.vscode

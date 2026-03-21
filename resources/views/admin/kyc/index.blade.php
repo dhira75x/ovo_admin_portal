@@ -42,20 +42,20 @@
                 <tbody class="divide-y divide-gray-700">
                     @forelse($submissions as $submission)
                     <tr class="hover:bg-gray-800/50 transition-colors">
-                        <td class="px-6 py-4 font-medium text-white">#{{ $submission->id }}</td>
+                        <td class="px-6 py-4 font-medium text-white">#{{ $submission['_id'] ?? $submission['id'] }}</td>
                         <td class="px-6 py-4">
                             <div class="flex items-center">
                                 <div class="h-8 w-8 rounded-full bg-gray-700 flex items-center justify-center text-xs font-bold text-white mr-3">
-                                    {{ substr($submission->user->name ?? 'U', 0, 1) }}
+                                    {{ substr(($submission['createdBy']['firstname'] ?? 'U'), 0, 1) }}
                                 </div>
                                 <div>
-                                    <div class="text-white font-medium">{{ $submission->user->name ?? 'Unknown' }}</div>
-                                    <div class="text-xs">{{ $submission->user->email ?? '' }}</div>
+                                    <div class="text-white font-medium">{{ ($submission['createdBy']['firstname'] ?? 'Unknown') . ' ' . ($submission['createdBy']['lastname'] ?? '') }}</div>
+                                    <div class="text-xs">{{ $submission['createdBy']['email'] ?? '' }}</div>
                                 </div>
                             </div>
                         </td>
                         <td class="px-6 py-4 text-white">
-                            {{ ucfirst(str_replace('_', ' ', $submission->document_type)) }}
+                            {{ ucfirst(str_replace('_', ' ', $submission['title'] ?? 'ID')) }}
                         </td>
                         <td class="px-6 py-4">
                             @php
@@ -64,19 +64,20 @@
                                     'approved' => 'bg-green-500/10 text-green-400',
                                     'rejected' => 'bg-red-500/10 text-red-400',
                                 ];
-                                $statusLabel = ucfirst($submission->status);
-                                $statusClass = $statusColors[$submission->status] ?? 'bg-gray-700 text-gray-300';
+                                $status = $submission['status'] ?? 'pending';
+                                $statusLabel = ucfirst($status);
+                                $statusClass = $statusColors[$status] ?? 'bg-gray-700 text-gray-300';
                             @endphp
                             <span class="px-2 py-1 rounded-full text-xs font-semibold {{ $statusClass }}">
                                 {{ $statusLabel }}
                             </span>
                         </td>
                         <td class="px-6 py-4">
-                            {{ $submission->created_at->format('M d, Y') }}<br>
-                            <span class="text-xs">{{ $submission->created_at->format('h:i A') }}</span>
+                            {{ \Carbon\Carbon::parse($submission['createdAt'] ?? now())->format('M d, Y') }}<br>
+                            <span class="text-xs">{{ \Carbon\Carbon::parse($submission['createdAt'] ?? now())->format('h:i A') }}</span>
                         </td>
                         <td class="px-6 py-4">
-                            <a href="{{ route('admin.kyc.show', $submission->id) }}" class="text-primary hover:text-primary-light font-medium transition-colors">
+                            <a href="{{ route('admin.kyc.show', $submission['_id'] ?? $submission['id']) }}" class="text-primary hover:text-primary-light font-medium transition-colors">
                                 Review
                             </a>
                         </td>

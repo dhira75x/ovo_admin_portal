@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\KycSubmission;
+use App\Services\EcommerceService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
@@ -10,21 +10,34 @@ use Exception;
 
 class KycController extends Controller
 {
+    protected $service;
+
+    public function __construct(EcommerceService $service)
+    {
+        $this->service = $service;
+    }
+
     /**
      * Display a listing of the resource.
      */
     public function index(Request $request)
     {
-        $query = KycSubmission::with('user');
+        $params = [
+            'page' => $request->get('page', 1),
+            'limit' => 10,
+            'status' => $request->get('status'),
+        ];
 
-        if ($request->has('status') && $request->status != 'all') {
-            $query->where('status', $request->status);
-        } else {
-            // Default to showing pending first
-            $query->orderByRaw("CASE status WHEN 'pending' THEN 1 WHEN 'approved' THEN 2 WHEN 'rejected' THEN 3 ELSE 4 END");
-        }
-
-        $submissions = $query->latest()->paginate(10);
+        $response = $this->service->getKycSubmissions(array_filter($params));
+        $payload = $response['payload'] ?? [];
+        
+        $submissions = new \Illuminate\Pagination\LengthAwarePaginator(
+            $payload['docs'] ?? [],
+            $payload['totalDocs'] ?? 0,
+            $payload['limit'] ?? 10,
+            $payload['page'] ?? 1,
+            ['path' => $request->url(), 'query' => $request->query()]
+        );
 
         return view('admin.kyc.index', compact('submissions'));
     }
@@ -34,7 +47,14 @@ class KycController extends Controller
      */
     public function show($id)
     {
-        $submission = KycSubmission::with(['user', 'reviewer'])->findOrFail($id);
+        $response = $this->service->getKycSubmissions();
+        $submissions = $response['payload']['docs'] ?? [];
+        $submission = collect($submissions)->firstWhere('_id', $id);
+
+        if (!$submission) {
+            abort(404);
+        }
+
         return view('admin.kyc.show', compact('submission'));
     }
 
@@ -44,16 +64,14 @@ class KycController extends Controller
     public function approve($id)
     {
         try {
-            $submission = KycSubmission::findOrFail($id);
+            $response = $this->service->updateKycStatus($id, 'approved');
 
-            $submission->update([
-                'status' => 'approved',
-                'reviewed_by' => Auth::id(),
-                'reviewed_at' => now(),
-                'rejection_reason' => null, // Clear any previous rejection reason
-            ]);
+            if ($response && ($response['status'] ?? '') === 'OK') {
+                return back()->with('success', 'KYC submission approved successfully.');
+            }
 
-            return back()->with('success', 'KYC submission approved successfully.');
+            $message = $response['message'] ?? 'Failed to approve submission';
+            return back()->with('error', $message);
         } catch (Exception $e) {
             return back()->with('error', 'Failed to approve submission: ' . $e->getMessage());
         }
@@ -73,16 +91,14 @@ class KycController extends Controller
         }
 
         try {
-            $submission = KycSubmission::findOrFail($id);
+            $response = $this->service->updateKycStatus($id, 'rejected', $request->rejection_reason);
 
-            $submission->update([
-                'status' => 'rejected',
-                'rejection_reason' => $request->rejection_reason,
-                'reviewed_by' => Auth::id(),
-                'reviewed_at' => now(),
-            ]);
+            if ($response && ($response['status'] ?? '') === 'OK') {
+                return back()->with('success', 'KYC submission rejected.');
+            }
 
-            return back()->with('success', 'KYC submission rejected.');
+            $message = $response['message'] ?? 'Failed to reject submission';
+            return back()->with('error', $message);
         } catch (Exception $e) {
             return back()->with('error', 'Failed to reject submission: ' . $e->getMessage());
         }

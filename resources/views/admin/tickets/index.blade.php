@@ -57,16 +57,16 @@
                 <tbody class="divide-y divide-gray-700">
                     @forelse($tickets as $ticket)
                     <tr class="hover:bg-gray-800/30 transition-colors">
-                        <td class="px-6 py-4 text-white font-medium">#{{ $ticket->id }}</td>
-                        <td class="px-6 py-4 text-white">{{ Str::limit($ticket->subject, 40) }}</td>
+                        <td class="px-6 py-4 text-white font-medium">#{{ $ticket['_id'] ?? $ticket['id'] }}</td>
+                        <td class="px-6 py-4 text-white">{{ Str::limit($ticket['subject'] ?? '', 40) }}</td>
                         <td class="px-6 py-4">
                             <div class="flex items-center">
                                 <div class="h-8 w-8 rounded-full bg-gray-700 flex items-center justify-center text-xs font-bold text-white mr-3">
-                                    {{ substr($ticket->user->name ?? 'U', 0, 1) }}
+                                    {{ substr(data_get($ticket, 'user.name') ?? 'U', 0, 1) }}
                                 </div>
                                 <div>
-                                    <div class="text-white">{{ $ticket->user->name ?? 'Unknown' }}</div>
-                                    <div class="text-xs">{{ $ticket->user->email ?? '' }}</div>
+                                    <div class="text-white">{{ data_get($ticket, 'user.name') ?? 'Unknown' }}</div>
+                                    <div class="text-xs">{{ data_get($ticket, 'user.email') ?? '' }}</div>
                                 </div>
                             </div>
                         </td>
@@ -78,8 +78,9 @@
                                     'resolved' => 'bg-blue-500/10 text-blue-400',
                                     'closed' => 'bg-gray-700 text-gray-300',
                                 ];
-                                $statusLabel = ucfirst(str_replace('_', ' ', $ticket->status));
-                                $statusClass = $statusColors[$ticket->status] ?? 'bg-gray-700 text-gray-300';
+                                $status = $ticket['status'] ?? 'open';
+                                $statusLabel = ucfirst(str_replace('_', ' ', $status));
+                                $statusClass = $statusColors[$status] ?? 'bg-gray-700 text-gray-300';
                             @endphp
                             <span class="px-2 py-1 rounded-full text-xs font-semibold {{ $statusClass }}">
                                 {{ $statusLabel }}
@@ -92,15 +93,16 @@
                                     'medium' => 'text-yellow-400',
                                     'low' => 'text-gray-400',
                                 ];
-                                $priorityClass = $priorityColors[$ticket->priority] ?? 'text-gray-400';
+                                $priority = $ticket['priority'] ?? 'low';
+                                $priorityClass = $priorityColors[$priority] ?? 'text-gray-400';
                             @endphp
                             <span class="font-medium {{ $priorityClass }}">
-                                {{ ucfirst($ticket->priority) }}
+                                {{ ucfirst($priority) }}
                             </span>
                         </td>
-                        <td class="px-6 py-4">{{ $ticket->updated_at->diffForHumans() }}</td>
+                        <td class="px-6 py-4">{{ \Carbon\Carbon::parse($ticket['updatedAt'] ?? now())->diffForHumans() }}</td>
                         <td class="px-6 py-4 text-right">
-                            <a href="{{ route('admin.tickets.show', $ticket->id) }}" class="text-primary hover:text-primary-light font-medium transition-colors">View</a>
+                            <a href="{{ route('admin.tickets.show', $ticket['_id'] ?? $ticket['id']) }}" class="text-primary hover:text-primary-light font-medium transition-colors">View</a>
                         </td>
                     </tr>
                     @empty

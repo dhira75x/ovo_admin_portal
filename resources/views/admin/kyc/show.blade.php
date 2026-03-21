@@ -17,22 +17,27 @@
             <h3 class="text-lg font-medium text-white mb-4">Document Preview</h3>
             
             <div class="bg-gray-800 rounded-lg p-4 flex items-center justify-center min-h-[300px] border border-gray-700">
-                @if(Str::endsWith($submission->document_path, ['.jpg', '.jpeg', '.png', '.gif', '.webp']))
-                    <img src="{{ $submission->document_path }}" alt="KYC Document" class="max-w-full max-h-[500px] rounded shadow-lg">
-                @elseif(Str::endsWith($submission->document_path, ['.pdf']))
-                    <iframe src="{{ $submission->document_path }}" class="w-full h-[500px] rounded border-none"></iframe>
+                @php
+                    $docPath = $submission['url'] ?? '';
+                    $isImage = Str::endsWith($docPath, ['.jpg', '.jpeg', '.png', '.gif', '.webp']) || (isset($submission['imgMimetype']) && Str::startsWith($submission['imgMimetype'], 'image/'));
+                    $isPdf = Str::endsWith($docPath, ['.pdf']) || (isset($submission['imgMimetype']) && $submission['imgMimetype'] === 'application/pdf');
+                @endphp
+                @if($isImage)
+                    <img src="{{ $docPath }}" alt="KYC Document" class="max-w-full max-h-[500px] rounded shadow-lg">
+                @elseif($isPdf)
+                    <iframe src="{{ $docPath }}" class="w-full h-[500px] rounded border-none"></iframe>
                 @else
                     <div class="text-center">
                         <svg class="w-16 h-16 mx-auto text-gray-600 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                         </svg>
                         <p class="text-gray-400 mb-2">Preview not available for this file type.</p>
-                        <a href="{{ $submission->document_path }}" target="_blank" class="text-primary hover:underline">Download Document</a>
+                        <a href="{{ $docPath }}" target="_blank" class="text-primary hover:underline">Download Document</a>
                     </div>
                 @endif
             </div>
             <div class="mt-4 text-center">
-                 <a href="{{ $submission->document_path }}" target="_blank" class="text-primary hover:text-primary-light text-sm flex justify-center items-center">
+                 <a href="{{ $docPath }}" target="_blank" class="text-primary hover:text-primary-light text-sm flex justify-center items-center">
                     <svg class="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                     </svg>
@@ -42,7 +47,7 @@
         </div>
 
         <!-- Action Forms -->
-        @if($submission->status === 'pending')
+        @if(($submission['status'] ?? '') === 'pending')
         <div class="bg-dark-lighter rounded-xl border border-gray-700 shadow-lg p-6">
             <h3 class="text-lg font-medium text-white mb-4">Review Action</h3>
             
@@ -103,7 +108,7 @@
                                     </div>
                                 </div>
                                 <div class="bg-gray-800/50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6 border-t border-gray-700">
-                                    <form action="{{ route('admin.kyc.approve', $submission->id) }}" method="POST">
+                                    <form action="{{ route('admin.kyc.approve', $submission['_id'] ?? $submission['id']) }}" method="POST">
                                         @csrf
                                         <button type="submit" class="inline-flex w-full justify-center rounded-md bg-green-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-500 sm:ml-3 sm:w-auto transition-colors">Confirm Approval</button>
                                     </form>
@@ -125,7 +130,7 @@
 
             <!-- Hidden Reject Form -->
             <div id="reject-form" class="hidden mt-6 pt-6 border-t border-gray-700">
-                <form action="{{ route('admin.kyc.reject', $submission->id) }}" method="POST">
+                <form action="{{ route('admin.kyc.reject', $submission['_id'] ?? $submission['id']) }}" method="POST">
                     @csrf
                     <div class="mb-4">
                         <label for="rejection_reason" class="block text-sm text-gray-400 mb-1">Reason for Rejection *</label>
@@ -152,7 +157,7 @@
         @endif
         
         <!-- Review Details (if not pending) -->
-        @if($submission->status !== 'pending')
+        @if(($submission['status'] ?? '') !== 'pending')
         <div class="bg-dark-lighter rounded-xl border border-gray-700 shadow-lg p-6">
             <h3 class="text-lg font-medium text-white mb-4">Review Details</h3>
             
@@ -165,24 +170,25 @@
                                 'approved' => 'text-green-400',
                                 'rejected' => 'text-red-400',
                             ];
-                            $statusClass = $statusColors[$submission->status] ?? 'text-gray-400';
+                            $status = $submission['status'] ?? 'pending';
+                            $statusClass = $statusColors[$status] ?? 'text-gray-400';
                         @endphp
-                        <span class="font-bold {{ $statusClass }} uppercase">{{ $submission->status }}</span>
+                        <span class="font-bold {{ $statusClass }} uppercase">{{ $status }}</span>
                     </div>
                     <div>
                         <span class="text-xs text-gray-500 uppercase tracking-wider block mb-1">Reviewed By</span>
-                        <span class="text-gray-300">{{ $submission->reviewer->name ?? 'System' }}</span>
+                        <span class="text-gray-300">{{ ($submission['reviewedBy']['firstname'] ?? '') . ' ' . ($submission['reviewedBy']['lastname'] ?? '') ?: 'System' }}</span>
                     </div>
                     <div>
                         <span class="text-xs text-gray-500 uppercase tracking-wider block mb-1">Date</span>
-                        <span class="text-gray-300">{{ $submission->is_reviewed ? $submission->reviewed_at->format('M d, Y h:i A') : 'N/A' }}</span>
+                        <span class="text-gray-300">{{ $submission['reviewedAt'] ? \Carbon\Carbon::parse($submission['reviewedAt'])->format('M d, Y h:i A') : 'N/A' }}</span>
                     </div>
                 </div>
                 
-                @if($submission->status === 'rejected')
+                @if(($submission['status'] ?? '') === 'rejected')
                 <div class="mt-4 pt-4 border-t border-gray-700">
                     <span class="text-xs text-red-500 uppercase tracking-wider block mb-1">Rejection Reason</span>
-                    <p class="text-gray-300">{{ $submission->rejection_reason }}</p>
+                    <p class="text-gray-300">{{ $submission['rejectionReason'] ?? $submission['rejection_reason'] ?? 'Not specified' }}</p>
                 </div>
                 @endif
             </div>
@@ -197,30 +203,30 @@
             
             <div class="flex items-center mb-6">
                 <div class="h-16 w-16 rounded-full bg-primary/20 flex items-center justify-center text-xl font-bold text-primary mr-4">
-                    {{ substr($submission->user->name ?? 'U', 0, 1) }}
+                    {{ substr(($submission['createdBy']['firstname'] ?? 'U'), 0, 1) }}
                 </div>
                 <div>
-                     <h2 class="text-xl font-bold text-white">{{ $submission->user->name ?? 'Unknown' }}</h2>
-                     <span class="inline-block px-2 py-0.5 rounded text-xs bg-gray-700 text-gray-300 mt-1">User #{{ $submission->user->id }}</span>
+                     <h2 class="text-xl font-bold text-white">{{ ($submission['createdBy']['firstname'] ?? 'Unknown') . ' ' . ($submission['createdBy']['lastname'] ?? '') }}</h2>
+                     <span class="inline-block px-2 py-0.5 rounded text-xs bg-gray-700 text-gray-300 mt-1">User #{{ $submission['createdBy']['_id'] ?? 'N/A' }}</span>
                 </div>
             </div>
 
             <div class="space-y-4">
                 <div>
                     <span class="text-sm text-gray-400 block mb-1">Email Address</span>
-                    <a href="mailto:{{ $submission->user->email }}" class="text-primary hover:underline">{{ $submission->user->email }}</a>
+                    <a href="mailto:{{ $submission['createdBy']['email'] ?? '' }}" class="text-primary hover:underline">{{ $submission['createdBy']['email'] ?? '' }}</a>
                 </div>
                 
                 <hr class="border-gray-700 my-4">
                 
                 <div>
                     <span class="text-sm text-gray-400 block mb-1">Document Type</span>
-                    <span class="text-white capitalize">{{ str_replace('_', ' ', $submission->document_type) }}</span>
+                    <span class="text-white capitalize">{{ str_replace('_', ' ', $submission['title'] ?? 'ID') }}</span>
                 </div>
 
                 <div>
                     <span class="text-sm text-gray-400 block mb-1">Submission Date</span>
-                    <span class="text-white">{{ $submission->created_at->format('M d, Y h:i A') }}</span>
+                    <span class="text-white">{{ \Carbon\Carbon::parse($submission['createdAt'] ?? now())->format('M d, Y h:i A') }}</span>
                 </div>
             </div>
         </div>
